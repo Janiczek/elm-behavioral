@@ -3,7 +3,9 @@ module BThread exposing
     , once, repeat, forever
     , request
     , waitFor, waitForFn, waitForOneOf, waitForOneOfFn
-    , block, blockFn, blockAll, blockUntil
+    , block, blockFn, blockAll
+    , blockAllWhileRequesting
+    , blockUntil, blockAllUntilOneOf
     )
 
 {-|
@@ -31,7 +33,17 @@ module BThread exposing
 
 # BCmd constructors - Block
 
-@docs block, blockFn, blockAll, blockUntil
+@docs block, blockFn, blockAll
+
+
+# BCmd constructors - Request + Block
+
+@docs blockAllWhileRequesting
+
+
+# BCmd constructors - Wait + Block
+
+@docs blockUntil, blockAllUntilOneOf
 
 -}
 
@@ -146,6 +158,24 @@ blockAll =
     BlockAll
 
 
+
+-- BCmd constructors - Request + Block
+
+
+blockAllWhileRequesting : { block : List et, request : e } -> BCmd e et
+blockAllWhileRequesting =
+    BlockAllWhileRequesting
+
+
+
+-- BCmd constructors - Wait + Block
+
+
 blockUntil : { block : et, until : et } -> BCmd e et
 blockUntil =
     BlockUntil
+
+
+blockAllUntilOneOf : { block : List et, until : List et } -> BCmd e et
+blockAllUntilOneOf =
+    BlockAllUntilOneOf

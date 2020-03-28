@@ -28,7 +28,8 @@ type BThreadState e
     = Requesting e
     | WaitingFor (e -> Bool)
     | Blocking (e -> Bool)
-    | BlockingUntil { blocking : e -> Bool, until : e -> Bool }
+    | BlockingUntil {- wait + block -} { blocking : e -> Bool, until : e -> Bool }
+    | BlockingWhileRequesting {- request + block -} { blocking : e -> Bool, requesting : e }
     | NoCmdSuppliedError
 
 
@@ -50,8 +51,10 @@ type BCmd e et
     | BlockFn (e -> Bool)
     | BlockAll (List et)
     | BlockAllFn (List (e -> Bool))
+    | BlockAllWhileRequesting { block : List et, request : e }
     | BlockUntil { block : et, until : et }
     | BlockUntilFn { block : e -> Bool, until : e -> Bool }
+    | BlockAllUntilOneOf { block : List et, until : List et }
     | NoCmdSupplied
 
 
@@ -61,6 +64,14 @@ cmdToState toType cmd =
         isOfType : et -> e -> Bool
         isOfType et e =
             toType e == et
+
+        isOneOfTypes : List et -> e -> Bool
+        isOneOfTypes ets e =
+            List.member (toType e) ets
+
+        isSatisfiedByOneOf : List (e -> Bool) -> e -> Bool
+        isSatisfiedByOneOf preds e =
+            List.any (\pred -> pred e) preds
     in
     case cmd of
         NoCmdSupplied ->
@@ -76,10 +87,10 @@ cmdToState toType cmd =
             WaitingFor pred
 
         WaitForOneOf ets ->
-            WaitingFor (\e -> List.any (\et -> isOfType et e) ets)
+            WaitingFor (isOneOfTypes ets)
 
         WaitForOneOfFn preds ->
-            WaitingFor (\e -> List.any (\pred -> pred e) preds)
+            WaitingFor (isSatisfiedByOneOf preds)
 
         Block et ->
             Blocking (isOfType et)
@@ -88,10 +99,16 @@ cmdToState toType cmd =
             Blocking pred
 
         BlockAll ets ->
-            Blocking (\e -> List.any (\et -> isOfType et e) ets)
+            Blocking (isOneOfTypes ets)
 
         BlockAllFn preds ->
-            Blocking (\e -> List.any (\pred -> pred e) preds)
+            Blocking (isSatisfiedByOneOf preds)
+
+        BlockAllWhileRequesting { block, request } ->
+            BlockingWhileRequesting
+                { blocking = isOneOfTypes block
+                , requesting = request
+                }
 
         BlockUntil { block, until } ->
             BlockingUntil
@@ -103,6 +120,12 @@ cmdToState toType cmd =
             BlockingUntil
                 { blocking = block
                 , until = until
+                }
+
+        BlockAllUntilOneOf { block, until } ->
+            BlockingUntil
+                { blocking = isOneOfTypes block
+                , until = isOneOfTypes until
                 }
 
 
@@ -158,6 +181,9 @@ stepUnconditionally toType bThread =
         BlockingUntil _ ->
             run ()
 
+        BlockingWhileRequesting _ ->
+            run ()
+
 
 decrement : BThreadType -> BThreadType
 decrement type_ =
@@ -198,6 +224,13 @@ notifyOf toType selectedEvent bThread =
 
         BlockingUntil { until } ->
             if until selectedEvent then
+                stepUnconditionally toType bThread
+
+            else
+                bThread
+
+        BlockingWhileRequesting { requesting } ->
+            if requesting == selectedEvent then
                 stepUnconditionally toType bThread
 
             else

@@ -130,6 +130,11 @@ toSnapshot model =
                             |> addBlock bThread.label bThread.id blocking
                             |> addWait bThread.label bThread.id until
 
+                    BlockingWhileRequesting { blocking, requesting } ->
+                        accSnapshot
+                            |> addBlock bThread.label bThread.id blocking
+                            |> addRequest bThread.label bThread.id requesting
+
                     NoCmdSuppliedError ->
                         accSnapshot
         )
@@ -157,42 +162,56 @@ addBlock label id pred snapshot =
     { snapshot | blocks = ( label, id, pred ) :: snapshot.blocks }
 
 
+iterate : (a -> Maybe a) -> a -> a
+iterate step value =
+    case step value of
+        Nothing ->
+            value
+
+        Just newValue ->
+            iterate step newValue
+
+
 sync :
     WorkerApp flags model msg e et
     -> ( Model model e et, Cmd (Msg msg e) )
     -> ( Model model e et, Cmd (Msg msg e) )
-sync app ( model, cmd ) =
-    let
-        snapshot : Snapshot e
-        snapshot =
-            toSnapshot model
+sync app modelAndCmd =
+    iterate
+        (\( model, cmd ) ->
+            let
+                snapshot : Snapshot e
+                snapshot =
+                    toSnapshot model
 
-        okRequests : List e
-        okRequests =
-            snapshot.requests
-                |> List.filterMap
-                    (\( _, _, e ) ->
-                        if not <| List.any (\( _, _, pred ) -> pred e) snapshot.blocks then
-                            Just e
+                okRequests : List e
+                okRequests =
+                    snapshot.requests
+                        |> List.filterMap
+                            (\( _, _, e ) ->
+                                if not <| List.any (\( _, _, pred ) -> pred e) snapshot.blocks then
+                                    Just e
 
-                        else
-                            Nothing
+                                else
+                                    Nothing
+                            )
+
+                maybeSelectedEvent : Maybe e
+                maybeSelectedEvent =
+                    -- TODO priority?
+                    List.head okRequests
+            in
+            maybeSelectedEvent
+                |> Maybe.map
+                    (\selectedEvent ->
+                        emitEventWithSnapshot
+                            selectedEvent
+                            (toSnapshot model)
+                            app
+                            ( model, cmd )
                     )
-
-        maybeSelectedEvent : Maybe e
-        maybeSelectedEvent =
-            List.head okRequests
-    in
-    maybeSelectedEvent
-        |> Maybe.map
-            (\selectedEvent ->
-                emitEventWithSnapshot
-                    selectedEvent
-                    snapshot
-                    app
-                    ( model, cmd )
-            )
-        |> Maybe.withDefault ( model, cmd )
+        )
+        modelAndCmd
 
 
 emitEvent :
