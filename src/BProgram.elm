@@ -117,6 +117,12 @@ toSnapshot model =
                         accSnapshot
                             |> addRequest bThread.label bThread.id e
 
+                    RequestingAnyOf es ->
+                        List.foldl
+                            (addRequest bThread.label bThread.id)
+                            accSnapshot
+                            es
+
                     WaitingFor pred ->
                         accSnapshot
                             |> addWait bThread.label bThread.id pred
@@ -145,6 +151,7 @@ toSnapshot model =
                )
         )
         model.bThreads
+        |> (\s -> { s | requests = List.reverse s.requests })
 
 
 addRequest : String -> BThreadId -> e -> Snapshot e -> Snapshot e

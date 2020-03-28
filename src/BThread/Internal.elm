@@ -26,6 +26,7 @@ type alias BThreadId =
 
 type BThreadState e
     = Requesting e
+    | RequestingAnyOf (List e)
     | WaitingFor (e -> Bool)
     | Blocking (e -> Bool)
     | BlockingUntil {- wait + block -} { blocking : e -> Bool, until : e -> Bool }
@@ -40,9 +41,8 @@ type BThreadType
 
 
 type BCmd e et
-    = -- REQUEST:
-      --| RequestFirstApplicableOf (List e)
-      Request e
+    = Request e
+    | RequestAnyOf (List e)
     | WaitFor et
     | WaitForFn (e -> Bool)
     | WaitForOneOf (List et)
@@ -79,6 +79,9 @@ cmdToState toType cmd =
 
         Request e ->
             Requesting e
+
+        RequestAnyOf es ->
+            RequestingAnyOf es
 
         WaitFor et ->
             WaitingFor (isOfType et)
@@ -172,6 +175,9 @@ stepUnconditionally toType bThread =
         Requesting _ ->
             run ()
 
+        RequestingAnyOf _ ->
+            run ()
+
         WaitingFor _ ->
             run ()
 
@@ -207,6 +213,13 @@ notifyOf toType selectedEvent bThread =
     case bThread.state of
         Requesting e ->
             if e == selectedEvent then
+                stepUnconditionally toType bThread
+
+            else
+                bThread
+
+        RequestingAnyOf es ->
+            if List.member selectedEvent es then
                 stepUnconditionally toType bThread
 
             else

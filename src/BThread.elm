@@ -1,7 +1,7 @@
 module BThread exposing
     ( BThread, BCmd
     , once, repeat, forever
-    , request
+    , request, requestAnyOf
     , waitFor, waitForFn, waitForOneOf, waitForOneOfFn
     , block, blockFn, blockAll
     , blockAllWhileRequesting
@@ -23,7 +23,7 @@ module BThread exposing
 
 # BCmd constructors - Request
 
-@docs request
+@docs request, requestAnyOf
 
 
 # BCmd constructors - WaitFor
@@ -113,6 +113,11 @@ forever =
 request : e -> BCmd e et
 request =
     Request
+
+
+requestAnyOf : List e -> BCmd e et
+requestAnyOf =
+    RequestAnyOf
 
 
 
