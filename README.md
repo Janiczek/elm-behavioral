@@ -15,6 +15,10 @@ $ make ticTacToe # running in conjunction with normal Platform.worker-like app!
 - http://www.wisdom.weizmann.ac.il/~bprogram/
 - http://www.wisdom.weizmann.ac.il/~bprogram/pres/BPintroduction.pdf
 - https://medium.com/@lmatteis/b-threads-programming-in-a-way-that-allows-for-easier-changes-5d95b9fb6928 
+- https://lmatteis.github.io/react-behavioral/
+- https://github.com/lmatteis/behavioral/
+- https://github.com/lmatteis/react-behavioral/
+- https://github.com/lmatteis/redux-behavioral/
 
 ## TODO:
 
