@@ -1,4 +1,7 @@
-module Main exposing (main)
+module TicTacToe exposing (main)
+
+{-| Not finished!!!
+-}
 
 import BProgram
 import BThread exposing (BThread)
